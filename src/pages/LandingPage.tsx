@@ -1,373 +1,244 @@
-import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 
-const FEATURES = [
+import {
+  ArrowRight,
+  Brain,
+  Compass,
+  Target,
+  TrendingUp,
+  Sparkles,
+  Rocket,
+  GitBranch,
+} from "lucide-react";
+
+import Navbar from "../components/Navbar";
+import Reveal from "../components/Reveal";
+import Hero from "./Hero";
+
+const features = [
   {
-    icon: '◈',
-    title: 'Smart Profile Analysis',
-    desc: 'Enter your academic background, skills, interests, and goals to create your career profile.',
-    color: '#818CF8',
+    icon: Compass,
+    title: "Career Discovery",
+    description:
+      "Explore career paths aligned with your interests, strengths, education, and aspirations.",
+    color: "from-violet-500 to-purple-600",
   },
   {
-    icon: '✦',
-    title: 'AI-Powered Recommendations',
-    desc: 'Get career suggestions based on the information and preferences in your profile.',
-    color: '#22D3EE',
+    icon: Target,
+    title: "Career Matching",
+    description:
+      "Discover career opportunities ranked by compatibility with your skills and preferences.",
+    color: "from-blue-500 to-cyan-500",
   },
   {
-    icon: '⊞',
-    title: 'Side-by-Side Compare',
-    desc: 'Compare career paths based on skills, role requirements, learning effort, and growth opportunities.',
-    color: '#34D399',
+    icon: TrendingUp,
+    title: "Skill Gap Analysis",
+    description:
+      "Identify the skills you need to develop and understand where you currently stand.",
+    color: "from-emerald-500 to-teal-500",
   },
   {
-    icon: '◫',
-    title: 'Track Your Journey',
-    desc: 'Save recommendations, revisit previous results, and track the career paths you\'re exploring.',
-    color: '#FCD34D',
+    icon: Brain,
+    title: "Personalized Roadmaps",
+    description:
+      "Get structured learning roadmaps with actionable milestones to achieve your career goals.",
+    color: "from-orange-500 to-pink-500",
   },
 ];
-
-const HOW_IT_WORKS = [
-  { step: '01', title: 'Build Your Profile', desc: 'Add your academic background, skills, interests, and career goals.' },
-  { step: '02', title: 'AI Analysis', desc: 'AI analyzes your profile to identify career paths that align with your interests and skills.' },
-  { step: '03', title: 'Explore Recommendations', desc: 'Get personalized career suggestions with reasons, skills to develop, and next steps.' },
-];
-
 
 export default function LandingPage() {
-  const { isAuthenticated } = useAuth();
-
   return (
-    <div className="mesh-bg" style={{ minHeight: '100vh' }}>
-      {/* Nav */}
-      <header
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-          background: 'rgba(7,9,26,0.85)',
-          backdropFilter: 'blur(16px)',
-          borderBottom: '1px solid rgba(99,102,241,0.12)',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: 1200,
-            margin: '0 auto',
-            padding: '0 2rem',
-            height: 64,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 9,
-                background: 'linear-gradient(135deg, #6366F1, #22D3EE)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 16,
-                fontWeight: 700,
-                color: 'white',
-              }}
-            >
-              ✦
-            </div>
-            <span style={{ fontWeight: 700, fontSize: '1.0625rem', color: '#E8EAF6', letterSpacing: '-0.02em' }}>
-              CareerAI
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            {isAuthenticated ? (
-              <Link to="/dashboard" className="btn-primary" style={{ textDecoration: 'none' }}>
-                Go to Dashboard →
-              </Link>
-            ) : (
-              <>
-                <Link to="/login" className="btn-ghost" style={{ textDecoration: 'none' }}>
-                  Log in
-                </Link>
-                <Link to="/signup" className="btn-primary" style={{ textDecoration: 'none' }}>
-                  Get Started
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+    <main className="min-h-screen overflow-hidden bg-[#080b14] text-slate-100">
+      <Navbar />
 
       {/* Hero */}
-      <section style={{ maxWidth: 1200, margin: '0 auto', padding: '7rem 2rem 5rem', textAlign: 'center' }}>
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            background: 'rgba(99,102,241,0.1)',
-            border: '1px solid rgba(99,102,241,0.25)',
-            borderRadius: 100,
-            padding: '0.375rem 1rem',
-            marginBottom: '2rem',
-            fontSize: '0.8125rem',
-            color: '#818CF8',
-            fontFamily: "'JetBrains Mono', monospace",
-          }}
-        >
-          <span style={{ color: '#34D399' }}>●</span> AI-Powered Career Discovery for Students
-        </div>
+      <Hero />
 
-        <h1
-          style={{
-            fontSize: 'clamp(2.25rem, 5.5vw, 4rem)',
-            fontWeight: 800,
-            lineHeight: 1.12,
-            margin: '0 0 1.5rem',
-            letterSpacing: '-0.03em',
-          }}
-        >
-          Discover the career path
-          <br />
-          <span className="gradient-text">that's right for you.</span>
-        </h1>
+      {/* Features */}
+      <section id="features" className="relative px-6 py-28">
+        <div className="absolute left-1/2 top-20 -z-0 h-72 w-72 -translate-x-1/2 rounded-full bg-violet-600/10 blur-[120px]" />
 
-        <p
-          style={{
-            fontSize: 'clamp(1rem, 2.5vw, 1.125rem)',
-            color: '#64748B',
-            maxWidth: 540,
-            margin: '0 auto 2.5rem',
-            lineHeight: 1.75,
-          }}
-        >
-          Explore personalized career paths based on your skills, interests, and academic background with the help of AI.
-        </p>
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          <Link to="/signup" className="btn-primary" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.75rem 2rem' }}>
-            Get AI Recommendations →
-          </Link>
-          <Link to="/login" className="btn-secondary" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.75rem 2rem' }}>
-            Sign In
-          </Link>
-        </div>
-
-        <p style={{ color: '#374151', fontSize: '0.8125rem', marginTop: '1.25rem', letterSpacing: '0.01em' }}>
-          AI-powered &nbsp;·&nbsp; Personalized to your profile &nbsp;·&nbsp; Built for students
-        </p>
-
-        {/* Hero visual */}
-        <div
-          style={{
-            maxWidth: 800,
-            margin: '4rem auto 0',
-            background: 'rgba(14,19,48,0.8)',
-            border: '1px solid rgba(99,102,241,0.2)',
-            borderRadius: 20,
-            padding: '1.5rem',
-            backdropFilter: 'blur(12px)',
-            boxShadow: '0 40px 80px rgba(0,0,0,0.4), 0 0 60px rgba(99,102,241,0.1)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#475569' }}>
-              Recommended Career Paths
-            </span>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.75rem', color: '#374151' }}>
-              preview
-            </span>
-          </div>
-          <div style={{ textAlign: 'left' }}>
-            {[
-              { title: 'Machine Learning Engineer', label: 'Strong Match', color: '#818CF8', bg: 'rgba(99,102,241,0.08)', border: 'rgba(99,102,241,0.2)' },
-              { title: 'Full Stack Developer', label: 'Good Match', color: '#22D3EE', bg: 'rgba(255,255,255,0.02)', border: 'transparent' },
-              { title: 'Data Scientist', label: 'Good Match', color: '#34D399', bg: 'rgba(255,255,255,0.02)', border: 'transparent' },
-            ].map((item, i) => (
-              <div
-                key={item.title}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem',
-                  padding: '0.875rem 1rem',
-                  background: item.bg,
-                  borderRadius: 10,
-                  marginBottom: 6,
-                  border: `1px solid ${item.border}`,
-                }}
-              >
-                <span
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: '0.75rem',
-                    color: '#374151',
-                    width: 24,
-                    flexShrink: 0,
-                  }}
-                >
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <span style={{ flex: 1, fontWeight: 600, color: '#CBD5E1', fontSize: '0.9375rem' }}>
-                  {item.title}
-                </span>
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: item.color,
-                    background: `${item.color}15`,
-                    border: `1px solid ${item.color}30`,
-                    borderRadius: 100,
-                    padding: '0.2rem 0.625rem',
-                    flexShrink: 0,
-                  }}
-                >
-                  {item.label}
-                </span>
+        <div className="relative mx-auto max-w-7xl">
+          <Reveal>
+            <div className="mx-auto mb-16 max-w-2xl text-center">
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-violet-400/20 bg-violet-400/10 px-4 py-2 text-sm text-violet-300">
+                <Sparkles size={15} />
+                Everything you need to grow
               </div>
-            ))}
+
+              <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">
+                Your career journey,
+                <span className="block bg-gradient-to-r from-violet-400 to-blue-400 bg-clip-text text-transparent">
+                  all in one place.
+                </span>
+              </h2>
+
+              <p className="mt-5 text-lg leading-8 text-slate-400">
+                From discovering your potential to building the skills that
+                matter, CareerVerse helps you move forward with clarity.
+              </p>
+            </div>
+          </Reveal>
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {features.map((feature, index) => {
+              const Icon = feature.icon;
+
+              return (
+                <Reveal key={feature.title} delay={index * 0.1}>
+                  <div className="group h-full rounded-2xl border border-white/[0.08] bg-white/[0.03] p-7 transition-all duration-300 hover:-translate-y-2 hover:border-violet-400/30 hover:bg-white/[0.05]">
+                    <div
+                      className={`mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${feature.color} shadow-lg`}
+                    >
+                      <Icon size={23} className="text-white" />
+                    </div>
+
+                    <h3 className="mb-3 text-lg font-semibold text-white">
+                      {feature.title}
+                    </h3>
+
+                    <p className="text-sm leading-7 text-slate-400">
+                      {feature.description}
+                    </p>
+
+                    <div className="mt-6 flex items-center gap-2 text-sm font-medium text-violet-300 transition-all group-hover:gap-3">
+                      Explore feature
+                      <ArrowRight size={15} />
+                    </div>
+                  </div>
+                </Reveal>
+              );
+            })}
           </div>
         </div>
       </section>
 
       {/* How it works */}
-      <section style={{ maxWidth: 1200, margin: '0 auto', padding: '5rem 2rem' }}>
-        <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.8rem', color: '#6366F1', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
-            How it works
-          </p>
-          <h2 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 800, color: '#E8EAF6', letterSpacing: '-0.02em', margin: 0 }}>
-            Three steps to clarity
-          </h2>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-          {HOW_IT_WORKS.map((item, i) => (
-            <div
-              key={item.step}
-              className="card"
-              style={{
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: '3.5rem',
-                  fontWeight: 700,
-                  color: 'rgba(99,102,241,0.08)',
-                  position: 'absolute',
-                  top: '0.5rem',
-                  right: '1rem',
-                  lineHeight: 1,
-                  userSelect: 'none',
-                }}
-              >
-                {item.step}
-              </div>
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  background: 'rgba(99,102,241,0.12)',
-                  border: '1px solid rgba(99,102,241,0.2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '1rem',
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: '0.8125rem',
-                  color: '#818CF8',
-                  fontWeight: 700,
-                }}
-              >
-                {String(i + 1)}
-              </div>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#E8EAF6', margin: '0 0 0.5rem' }}>
-                {item.title}
-              </h3>
-              <p style={{ color: '#64748B', margin: 0, lineHeight: 1.6, fontSize: '0.9375rem' }}>
-                {item.desc}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
+      <section id="how-it-works" className="px-6 py-24">
+        <div className="mx-auto max-w-7xl">
+          <Reveal>
+            <div className="grid items-center gap-14 lg:grid-cols-2">
+              <div>
+                <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-violet-400">
+                  Your journey, simplified
+                </p>
 
-      {/* Features */}
-      <section style={{ maxWidth: 1200, margin: '0 auto', padding: '3rem 2rem 5rem' }}>
-        <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-          <h2 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 800, color: '#E8EAF6', letterSpacing: '-0.02em', margin: 0 }}>
-            Everything you need to explore your career
-          </h2>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem', maxWidth: 800, margin: '0 auto' }}>
-          {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className="card"
-              style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}
-            >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  background: `${f.color}18`,
-                  border: `1px solid ${f.color}30`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 20,
-                  color: f.color,
-                }}
-              >
-                {f.icon}
+                <h2 className="text-3xl font-bold leading-tight sm:text-5xl">
+                  Turn career confusion into
+                  <span className="text-violet-400"> direction.</span>
+                </h2>
+
+                <p className="mt-6 max-w-xl leading-8 text-slate-400">
+                  CareerVerse brings your career exploration, skill development,
+                  and progress tracking together into one personalized experience.
+                </p>
               </div>
-              <h3 style={{ fontSize: '1.0625rem', fontWeight: 700, color: '#E8EAF6', margin: 0 }}>{f.title}</h3>
-              <p style={{ color: '#64748B', margin: 0, lineHeight: 1.6, fontSize: '0.9rem' }}>{f.desc}</p>
+
+              <div className="space-y-4">
+                {[
+                  {
+                    number: "01",
+                    title: "Discover yourself",
+                    text: "Understand your interests, strengths, and career preferences.",
+                  },
+                  {
+                    number: "02",
+                    title: "Explore your possibilities",
+                    text: "Find career paths that align with your profile.",
+                  },
+                  {
+                    number: "03",
+                    title: "Build your roadmap",
+                    text: "Identify skill gaps and plan your learning journey.",
+                  },
+                  {
+                    number: "04",
+                    title: "Track your growth",
+                    text: "Monitor progress and keep moving towards your goals.",
+                  },
+                ].map((step) => (
+                  <div
+                    key={step.number}
+                    className="flex gap-5 rounded-xl border border-white/[0.07] bg-white/[0.025] p-5"
+                  >
+                    <span className="text-sm font-semibold text-violet-400">
+                      {step.number}
+                    </span>
+
+                    <div>
+                      <h3 className="font-semibold text-white">{step.title}</h3>
+                      <p className="mt-1 text-sm leading-6 text-slate-400">
+                        {step.text}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
+          </Reveal>
         </div>
       </section>
 
       {/* CTA */}
-      <section style={{ padding: '4rem 2rem 5rem' }}>
-        <div
-          style={{
-            maxWidth: 640,
-            margin: '0 auto',
-            textAlign: 'center',
-            background: 'rgba(14,19,48,0.8)',
-            border: '1px solid rgba(99,102,241,0.2)',
-            borderRadius: 20,
-            padding: '3rem 2rem',
-          }}
-        >
-          <h2 style={{ fontSize: 'clamp(1.5rem, 4vw, 2.125rem)', fontWeight: 800, color: '#E8EAF6', letterSpacing: '-0.02em', margin: '0 0 1rem' }}>
-            Ready to explore your career path?
-          </h2>
-          <p style={{ color: '#64748B', fontSize: '1rem', margin: '0 0 2.25rem', lineHeight: 1.7 }}>
-            Build your profile and discover career options that align with your skills, interests, and goals.
-          </p>
-          <Link to="/signup" className="btn-primary" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.8125rem 2.25rem' }}>
-            Start Exploring →
-          </Link>
-        </div>
+      <section id="about" className="px-6 py-24">
+        <Reveal>
+          <div className="relative mx-auto max-w-7xl overflow-hidden rounded-3xl border border-violet-400/20 bg-gradient-to-br from-violet-950/70 via-[#11152a] to-blue-950/50 px-8 py-16 text-center sm:px-16">
+            <div className="absolute left-1/2 top-0 h-60 w-60 -translate-x-1/2 rounded-full bg-violet-500/20 blur-[100px]" />
+
+            <div className="relative">
+              <div className="mb-6 inline-flex rounded-full border border-white/10 bg-white/5 p-3">
+                <Rocket size={25} className="text-violet-300" />
+              </div>
+
+              <h2 className="mx-auto max-w-3xl text-3xl font-bold leading-tight sm:text-5xl">
+                Your future isn't something you find.
+                <span className="block text-violet-300">
+                  It's something you build.
+                </span>
+              </h2>
+
+              <p className="mx-auto mt-6 max-w-xl leading-8 text-slate-400">
+                Take the first step towards a career that actually feels like
+                yours.
+              </p>
+
+              <a
+                href="/signup"
+                className="mt-9 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3.5 font-semibold text-[#080b14] transition hover:bg-violet-100"
+              >
+                Start your journey
+                <ArrowRight size={18} />
+              </a>
+            </div>
+          </div>
+        </Reveal>
       </section>
 
       {/* Footer */}
-      <footer style={{ borderTop: '1px solid rgba(99,102,241,0.1)', padding: '1.75rem 2rem', textAlign: 'center' }}>
-        <p style={{ color: '#374151', fontSize: '0.875rem', margin: 0 }}>
-          © 2026 CareerAI · AI-powered career exploration for students.
-        </p>
+      <footer className="border-t border-white/[0.07] px-6 py-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-5 sm:flex-row">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-blue-500">
+              <Sparkles size={16} className="text-white" />
+            </div>
+
+            <span className="font-semibold text-white">CareerVerse</span>
+          </div>
+
+          <p className="text-center text-sm text-slate-500">
+            © {new Date().getFullYear()} CareerVerse. Your future, your way.
+          </p>
+
+          <a
+            href="https://github.com"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"
+          >
+            <GitBranch size={17} />
+            GitHub
+          </a>
+        </div>
       </footer>
-    </div>
+    </main>
   );
 }

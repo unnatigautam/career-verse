@@ -1,228 +1,635 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { getProfile } from '../services/profileService';
-import { createRecommendation } from '../services/recommendationService';
-import CareerCard from '../components/CareerCard';
-import { AILoadingState } from '../components/LoadingSpinner';
-import type { Profile, Recommendation } from '../types';
+
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  Sparkles,
+  Target,
+  TrendingUp,
+  Brain,
+  Code2,
+  Palette,
+  Database,
+  Shield,
+  Cloud,
+  BriefcaseBusiness,
+  CheckCircle2,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
+import { getLatestAssessment } from "../services/assessmentService";
+import {
+  getProfile,
+  type ProfileData,
+} from "../services/profileService";
+
+type Assessment = {
+  education?: string;
+  field?: string;
+  interests?: string[];
+  skills?: string[];
+  experience?: string;
+  workPreference?: string;
+  careerGoal?: string;
+};
+
+type Career = {
+  id: number;
+  title: string;
+  category: string;
+  description: string;
+  skills: string[];
+  interests: string[];
+  icon: typeof Code2;
+  color: string;
+};
+
+type Recommendation = {
+  career: Career;
+  score: number;
+  matchedSkills: string[];
+  matchedInterests: string[];
+  missingSkills: string[];
+};
+
+const careerData: Career[] = [
+  {
+    id: 1,
+    title: "Frontend Developer",
+    category: "Development",
+    description:
+      "Build interactive websites and applications with engaging user experiences.",
+    skills: ["HTML", "CSS", "JavaScript", "React", "UI Design"],
+    interests: ["Web Development", "Design", "Technology", "Programming"],
+    icon: Code2,
+    color: "violet",
+  },
+  {
+    id: 2,
+    title: "AI/ML Engineer",
+    category: "Artificial Intelligence",
+    description:
+      "Develop intelligent systems using machine learning and AI technologies.",
+    skills: ["Python", "Machine Learning", "Statistics", "Deep Learning"],
+    interests: [
+      "Artificial Intelligence",
+      "Machine Learning",
+      "Research",
+      "Programming",
+    ],
+    icon: Brain,
+    color: "blue",
+  },
+  {
+    id: 3,
+    title: "Data Scientist",
+    category: "Data & Analytics",
+    description:
+      "Analyze datasets, discover patterns, and build data-driven solutions.",
+    skills: ["Python", "SQL", "Statistics", "Data Visualization"],
+    interests: ["Data Science", "Analytics", "Mathematics", "Research"],
+    icon: Database,
+    color: "cyan",
+  },
+  {
+    id: 4,
+    title: "UI/UX Designer",
+    category: "Design",
+    description:
+      "Create intuitive digital experiences through user research and interface design.",
+    skills: ["Figma", "Wireframing", "Prototyping", "User Research"],
+    interests: ["Design", "Creativity", "User Experience", "Product"],
+    icon: Palette,
+    color: "pink",
+  },
+  {
+    id: 5,
+    title: "Backend Developer",
+    category: "Development",
+    description:
+      "Build APIs, databases, and server-side systems powering applications.",
+    skills: ["Node.js", "Python", "SQL", "REST APIs", "Databases"],
+    interests: ["Backend Development", "Programming", "Technology"],
+    icon: Code2,
+    color: "emerald",
+  },
+  {
+    id: 6,
+    title: "Cybersecurity Analyst",
+    category: "Security",
+    description:
+      "Protect digital systems by identifying vulnerabilities and security threats.",
+    skills: ["Networking", "Linux", "Security", "Python"],
+    interests: [
+      "Cybersecurity",
+      "Security",
+      "Technology",
+      "Problem Solving",
+    ],
+    icon: Shield,
+    color: "orange",
+  },
+  {
+    id: 7,
+    title: "Cloud Engineer",
+    category: "Infrastructure",
+    description:
+      "Build and maintain scalable cloud infrastructure and deployment systems.",
+    skills: ["AWS", "Linux", "Docker", "Networking"],
+    interests: ["Cloud Computing", "Infrastructure", "Technology"],
+    icon: Cloud,
+    color: "sky",
+  },
+  {
+    id: 8,
+    title: "Product Manager",
+    category: "Product & Business",
+    description:
+      "Connect user needs, business goals, and technology to build useful products.",
+    skills: ["Communication", "Product Strategy", "Analytics", "Planning"],
+    interests: [
+      "Product Management",
+      "Business",
+      "Leadership",
+      "Product",
+    ],
+    icon: BriefcaseBusiness,
+    color: "amber",
+  },
+];
+
+const normalize = (value: string) => value.toLowerCase().trim();
+
+function calculateMatch(career: Career, assessment: Assessment) {
+  const userInterests = assessment.interests ?? [];
+  const userSkills = assessment.skills ?? [];
+
+  const matchedInterests = career.interests.filter((interest) =>
+    userInterests.some(
+      (userInterest) =>
+        normalize(userInterest).includes(normalize(interest)) ||
+        normalize(interest).includes(normalize(userInterest))
+    )
+  );
+
+  const matchedSkills = career.skills.filter((skill) =>
+    userSkills.some(
+      (userSkill) =>
+        normalize(userSkill).includes(normalize(skill)) ||
+        normalize(skill).includes(normalize(userSkill))
+    )
+  );
+
+  const interestScore =
+    career.interests.length > 0
+      ? (matchedInterests.length / career.interests.length) * 60
+      : 0;
+
+  const skillScore =
+    career.skills.length > 0
+      ? (matchedSkills.length / career.skills.length) * 40
+      : 0;
+
+  const rawScore = interestScore + skillScore;
+
+  const hasAssessmentData =
+    userInterests.length > 0 || userSkills.length > 0;
+
+  const score = hasAssessmentData
+    ? Math.min(98, Math.max(35, Math.round(rawScore)))
+    : 75;
+
+  const missingSkills = career.skills.filter(
+    (skill) => !matchedSkills.includes(skill)
+  );
+
+  return {
+    score,
+    matchedSkills,
+    matchedInterests,
+    missingSkills,
+  };
+}
+
+function mergeUserData(
+  profile: ProfileData | null,
+  assessment: Assessment
+): Assessment {
+  return {
+    education: assessment.education || profile?.education || "",
+    field: assessment.field || profile?.field || "",
+    interests:
+      assessment.interests?.length
+        ? assessment.interests
+        : profile?.interests ?? [],
+    skills:
+      assessment.skills?.length
+        ? assessment.skills
+        : profile?.skills ?? [],
+    experience: assessment.experience || profile?.experience || "",
+    workPreference:
+      assessment.workPreference || profile?.workPreference || "",
+    careerGoal: assessment.careerGoal || profile?.careerGoal || "",
+  };
+}
 
 export default function RecommendationsPage() {
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [assessment, setAssessment] = useState<Assessment>({});
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (user) setProfile(getProfile(user.id));
-  }, [user]);
-
-  const handleGenerate = async () => {
-    if (!profile) return;
-    setLoading(true);
-    setError('');
-    setRecommendation(null);
+  const loadRecommendationsData = async () => {
     try {
-      const rec = await createRecommendation(profile);
-      setRecommendation(rec);
+      setLoading(true);
+      setError("");
+
+      // Fetch Profile and Assessment independently.
+      const [profileResult, assessmentResult] =
+        await Promise.allSettled([
+          getProfile(),
+          getLatestAssessment(),
+        ]);
+
+      let loadedProfile: ProfileData | null = null;
+      let loadedAssessment: Assessment = {};
+
+      if (profileResult.status === "fulfilled") {
+        loadedProfile = profileResult.value;
+        setProfile(loadedProfile);
+      } else {
+        console.error("Failed to load profile:", profileResult.reason);
+        setProfile(null);
+      }
+
+      if (assessmentResult.status === "fulfilled") {
+        loadedAssessment =
+          assessmentResult.value?.assessment?.answers ?? {};
+      } else {
+        console.error(
+          "Failed to load assessment:",
+          assessmentResult.reason
+        );
+      }
+
+      // Assessment data takes priority; Profile fills missing information.
+      const mergedData = mergeUserData(
+        loadedProfile,
+        loadedAssessment
+      );
+
+      setAssessment(mergedData);
+
+      // Only show a complete error when both sources fail.
+      if (
+        profileResult.status === "rejected" &&
+        assessmentResult.status === "rejected"
+      ) {
+        setError(
+          "Unable to load your profile or assessment. Please check your connection and try again."
+        );
+      }
     } catch (err) {
-      setError('Something went wrong generating recommendations. Please try again.');
-      console.error(err);
+      console.error("Failed to load recommendation data:", err);
+      setError(
+        "Unable to load your career information. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const profileIncomplete = !profile || !profile.skills.length || !profile.interests.length;
+  useEffect(() => {
+    loadRecommendationsData();
+  }, []);
+
+  const recommendations: Recommendation[] = useMemo(() => {
+    return careerData
+      .map((career) => ({
+        career,
+        ...calculateMatch(career, assessment),
+      }))
+      .sort((a, b) => b.score - a.score);
+  }, [assessment]);
+
+  const hasAssessment =
+    Boolean(assessment.interests?.length) ||
+    Boolean(assessment.skills?.length);
+
+  const colorClasses: Record<string, string> = {
+    violet: "bg-violet-500/10 text-violet-400 border-violet-500/20",
+    blue: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    cyan: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+    pink: "bg-pink-500/10 text-pink-400 border-pink-500/20",
+    emerald: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    orange: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+    sky: "bg-sky-500/10 text-sky-400 border-sky-500/20",
+    amber: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  };
 
   return (
-    <div className="mesh-bg" style={{ minHeight: '100vh', padding: '2rem 1.5rem' }}>
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+    <div className="min-h-screen bg-[#080b14] text-white">
+      {/* HEADER */}
+      <header className="border-b border-white/5 bg-[#080b14]/90">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-2 text-slate-400 hover:text-white"
+          >
+            <ArrowLeft size={18} />
+            <span className="text-sm">Dashboard</span>
+          </Link>
 
-        {/* Header */}
-        <div style={{ marginBottom: '2.5rem' }}>
-          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.8rem', color: '#6366F1', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 0.5rem' }}>
-            AI Career Advisor
-          </p>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#E8EAF6', margin: '0 0 0.5rem', letterSpacing: '-0.02em' }}>
-            Your Career Recommendations
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center">
+              <Sparkles size={16} />
+            </div>
+            <span className="font-bold">
+              Career<span className="text-violet-400">Verse</span>
+            </span>
+          </div>
+
+          <Link
+            to="/careers"
+            className="text-sm text-violet-400 hover:text-violet-300"
+          >
+            Explore Careers
+          </Link>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-6 py-10">
+        {/* INTRO */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 text-violet-400 text-sm mb-4">
+            <Sparkles size={16} />
+            Personalized Insights
+          </div>
+
+          <h1 className="text-3xl md:text-4xl font-bold mb-4">
+            Your career recommendations
           </h1>
-          <p style={{ color: '#475569', margin: 0, fontSize: '0.9375rem' }}>
-            Based on your skills, interests, academic background, and career goals.
+
+          <p className="text-slate-400 max-w-2xl">
+            Discover career paths that align with your interests and
+            skills, along with the capabilities you can develop next.
           </p>
         </div>
 
-        {/* Profile incomplete warning */}
-        {profileIncomplete && !loading && !recommendation && (
-          <div
-            style={{
-              background: 'rgba(251,191,36,0.08)',
-              border: '1px solid rgba(251,191,36,0.25)',
-              borderRadius: 14,
-              padding: '1.25rem 1.5rem',
-              marginBottom: '2rem',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '1rem',
-            }}
-          >
-            <span style={{ color: '#FCD34D', fontSize: 20, flexShrink: 0 }}>⚠</span>
-            <div>
-              <p style={{ color: '#FCD34D', fontWeight: 600, margin: '0 0 0.375rem', fontSize: '0.9375rem' }}>
-                Your profile needs more information
-              </p>
-              <p style={{ color: '#92400E', margin: '0 0 0.75rem', fontSize: '0.875rem' }}>
-                Add at least your skills and interests for more accurate recommendations.
-              </p>
-              <Link to="/profile" className="btn-primary" style={{ textDecoration: 'none', background: 'rgba(251,191,36,0.2)', color: '#FCD34D', border: '1px solid rgba(251,191,36,0.3)' }}>
-                Complete profile →
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {/* Profile summary */}
-        {profile && !loading && (
-          <div className="card" style={{ marginBottom: '2rem' }}>
-            <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 1rem' }}>
-              Analyzing based on your profile
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-              {profile.degree && (
-                <div>
-                  <p style={{ fontSize: '0.8125rem', color: '#374151', margin: '0 0 0.375rem' }}>Degree</p>
-                  <p style={{ fontSize: '0.9rem', color: '#CBD5E1', fontWeight: 500, margin: 0 }}>{profile.degree}</p>
-                </div>
-              )}
-              {profile.skills.length > 0 && (
-                <div>
-                  <p style={{ fontSize: '0.8125rem', color: '#374151', margin: '0 0 0.375rem' }}>Skills ({profile.skills.length})</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                    {profile.skills.slice(0, 4).map((s) => (
-                      <span key={s} className="tag" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>{s}</span>
-                    ))}
-                    {profile.skills.length > 4 && <span style={{ fontSize: '0.75rem', color: '#475569' }}>+{profile.skills.length - 4}</span>}
-                  </div>
-                </div>
-              )}
-              {profile.preferredAreas.length > 0 && (
-                <div>
-                  <p style={{ fontSize: '0.8125rem', color: '#374151', margin: '0 0 0.375rem' }}>Focus areas</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                    {profile.preferredAreas.slice(0, 2).map((a) => (
-                      <span key={a} className="tag tag-cyan" style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem' }}>{a}</span>
-                    ))}
-                    {profile.preferredAreas.length > 2 && <span style={{ fontSize: '0.75rem', color: '#475569' }}>+{profile.preferredAreas.length - 2}</span>}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Generate button */}
-        {!loading && !recommendation && (
-          <div style={{ textAlign: 'center', padding: '3rem 0' }}>
-            <div
-              style={{
-                width: 80,
-                height: 80,
-                borderRadius: 20,
-                background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(34,211,238,0.1))',
-                border: '1px solid rgba(99,102,241,0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 32,
-                margin: '0 auto 1.5rem',
-              }}
-            >
-              ✦
-            </div>
-            <h2 style={{ fontSize: '1.375rem', fontWeight: 700, color: '#E8EAF6', margin: '0 0 0.75rem' }}>
-              Ready to discover your career paths?
-            </h2>
-            <p style={{ color: '#475569', margin: '0 0 2rem', fontSize: '0.9375rem', maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>
-              Click below to let our AI analyze your profile and generate 3 personalized career recommendations.
-            </p>
-
-            {error && (
-              <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '0.75rem 1rem', color: '#F87171', fontSize: '0.875rem', marginBottom: '1.5rem', maxWidth: 400, margin: '0 auto 1.5rem' }}>
-                {error}
-              </div>
-            )}
-
-            <button
-              onClick={handleGenerate}
-              className="btn-primary"
-              style={{ fontSize: '1.0625rem', padding: '0.875rem 2.5rem' }}
-            >
-              ✦ Generate AI Recommendations →
-            </button>
-          </div>
-        )}
-
-        {/* Loading */}
+        {/* LOADING */}
         {loading && (
-          <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
-            <AILoadingState />
+          <div className="mb-8 rounded-xl border border-white/10 bg-white/[0.025] p-6 flex items-center gap-3 text-slate-400">
+            <RefreshCw size={18} className="animate-spin text-violet-400" />
+            Loading your profile and assessment...
           </div>
         )}
 
-        {/* Results */}
-        {recommendation && !loading && (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <div>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#E8EAF6', margin: '0 0 0.25rem' }}>
-                  Your 3 career recommendations
-                </h2>
-                <p style={{ color: '#475569', fontSize: '0.875rem', margin: 0, fontFamily: "'JetBrains Mono', monospace" }}>
-                  Generated {new Date(recommendation.createdAt).toLocaleString()}
+        {/* ERROR */}
+        {!loading && error && (
+          <div className="mb-8 rounded-xl border border-red-500/20 bg-red-500/5 p-5">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={20} />
+              <div className="flex-1">
+                <p className="font-medium text-red-300">
+                  Couldn't load your career information
                 </p>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <Link to="/compare" className="btn-secondary" style={{ textDecoration: 'none' }}>
-                  ⊞ Compare paths →
-                </Link>
-                <button onClick={handleGenerate} className="btn-ghost">
-                  ↺ Regenerate
+                <p className="text-sm text-slate-400 mt-1">{error}</p>
+                <button
+                  onClick={loadRecommendationsData}
+                  className="mt-3 inline-flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300"
+                >
+                  <RefreshCw size={14} />
+                  Retry
                 </button>
               </div>
             </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {recommendation.careers.map((career, i) => (
-                <CareerCard key={career.title} career={career} index={i} />
-              ))}
-            </div>
-
-            <div
-              style={{
-                marginTop: '2rem',
-                background: 'rgba(99,102,241,0.05)',
-                border: '1px solid rgba(99,102,241,0.15)',
-                borderRadius: 14,
-                padding: '1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem',
-                flexWrap: 'wrap',
-              }}
-            >
-              <span style={{ color: '#818CF8', fontSize: 20 }}>◫</span>
-              <p style={{ color: '#94A3B8', fontSize: '0.9rem', margin: 0, flex: 1 }}>
-                These recommendations have been saved to your history. You can revisit them anytime.
-              </p>
-              <Link to="/history" style={{ color: '#818CF8', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>
-                View history →
-              </Link>
-            </div>
           </div>
         )}
 
-      </div>
+        {/* ASSESSMENT NOTICE */}
+        {!loading && !error && !hasAssessment && (
+          <div className="mb-8 rounded-xl border border-amber-500/20 bg-amber-500/5 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle
+                className="text-amber-400 shrink-0 mt-0.5"
+                size={20}
+              />
+              <div>
+                <p className="font-medium text-amber-200">
+                  Complete your career assessment
+                </p>
+                <p className="text-sm text-slate-400 mt-1">
+                  These are general suggestions. Complete your assessment
+                  to make your recommendations more personalized.
+                </p>
+              </div>
+            </div>
+
+            <Link
+              to="/assessment"
+              className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-sm"
+            >
+              Take Assessment <ArrowRight size={16} />
+            </Link>
+          </div>
+        )}
+
+        {/* SUMMARY */}
+        <div className="grid sm:grid-cols-3 gap-4 mb-8">
+          <div className="rounded-xl border border-white/10 bg-white/[0.025] p-5">
+            <div className="flex items-center gap-2 text-slate-400 text-sm mb-3">
+              <Target size={16} className="text-violet-400" />
+              Career Paths
+            </div>
+            <p className="text-2xl font-bold">{recommendations.length}</p>
+            <p className="text-xs text-slate-500 mt-1">
+              Evaluated career options
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/[0.025] p-5">
+            <div className="flex items-center gap-2 text-slate-400 text-sm mb-3">
+              <TrendingUp size={16} className="text-emerald-400" />
+              Top Match
+            </div>
+            <p className="text-xl font-bold">
+              {recommendations[0]?.career.title ?? "—"}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              {recommendations[0]?.score ?? 0}% illustrative match
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/[0.025] p-5">
+            <div className="flex items-center gap-2 text-slate-400 text-sm mb-3">
+              <Brain size={16} className="text-blue-400" />
+              Your Interests
+            </div>
+            <p className="text-2xl font-bold">
+              {assessment.interests?.length ?? 0}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              Interests selected
+            </p>
+          </div>
+        </div>
+
+        {/* RECOMMENDATIONS */}
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-xl font-semibold">
+            Recommended career paths
+          </h2>
+          <span className="text-xs text-slate-500">
+            Highest match first
+          </span>
+        </div>
+
+        <div className="space-y-5">
+          {recommendations.map((item, index) => {
+            const Icon = item.career.icon;
+
+            return (
+              <div
+                key={item.career.id}
+                className="rounded-2xl border border-white/10 bg-white/[0.025] p-6 md:p-7 hover:border-violet-500/20 transition"
+              >
+                <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+                  {/* CAREER INFO */}
+                  <div className="flex-1">
+                    <div className="flex items-start gap-4">
+                      <div
+                        className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 ${
+                          colorClasses[item.career.color]
+                        }`}
+                      >
+                        <Icon size={22} />
+                      </div>
+
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          {index === 0 && (
+                            <span className="text-xs px-2 py-1 rounded-full bg-violet-500/10 text-violet-300">
+                              Top Recommendation
+                            </span>
+                          )}
+                          <span className="text-xs text-slate-500">
+                            {item.career.category}
+                          </span>
+                        </div>
+
+                        <h3 className="text-xl font-semibold">
+                          {item.career.title}
+                        </h3>
+                        <p className="text-sm text-slate-400 mt-2 max-w-2xl">
+                          {item.career.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* MATCHED SKILLS */}
+                    <div className="mt-6">
+                      <p className="text-xs text-slate-500 mb-3">
+                        Skills you already have that match
+                      </p>
+
+                      {item.matchedSkills.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {item.matchedSkills.map((skill) => (
+                            <span
+                              key={skill}
+                              className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400"
+                            >
+                              <CheckCircle2 size={13} />
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-500">
+                          Add skills in your assessment or profile to see matching skills.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* SKILL GAPS */}
+                    <div className="mt-5">
+                      <p className="text-xs text-slate-500 mb-3">
+                        Skills to develop
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {item.missingSkills.slice(0, 4).map((skill) => (
+                          <span
+                            key={skill}
+                            className="text-xs px-2.5 py-1.5 rounded-lg bg-white/5 text-slate-400"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* MATCH SCORE */}
+                  <div className="lg:w-44 shrink-0 lg:border-l lg:border-white/5 lg:pl-6">
+                    <div className="flex lg:flex-col items-center lg:items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs text-slate-500 mb-1">
+                          Illustrative match
+                        </p>
+                        <p className="text-3xl font-bold text-violet-300">
+                          {item.score}%
+                        </p>
+                      </div>
+
+                      <div className="w-full max-w-32 h-2 rounded-full bg-white/5 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-violet-500 to-blue-500"
+                          style={{ width: `${item.score}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <Link
+                      to="/careers"
+                      className="flex items-center justify-center gap-2 w-full mt-5 py-2.5 rounded-lg border border-white/10 text-sm text-slate-300 hover:text-white hover:border-violet-500/30 transition"
+                    >
+                      Explore Career <ArrowUpRight size={15} />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* CTA */}
+        <div className="mt-10 rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/10 to-blue-500/5 p-7 md:p-9">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+            <div>
+              <h2 className="text-xl font-semibold mb-2">
+                Ready to build your career roadmap?
+              </h2>
+              <p className="text-sm text-slate-400">
+                Explore career paths and identify the skills you need next.
+              </p>
+            </div>
+
+            <Link
+              to="/careers"
+              className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 font-medium hover:opacity-90 transition"
+            >
+              Explore All Careers <ArrowRight size={17} />
+            </Link>
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-600 mt-8 text-center">
+          Match scores are illustrative and based on simple overlap between
+          assessment interests and skills. They are not validated AI predictions.
+        </p>
+      </main>
     </div>
   );
 }

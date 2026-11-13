@@ -1,92 +1,180 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { User, AuthState } from '../types';
 
-interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string) => Promise<void>;
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+
+import {
+  signupUser,
+  loginUser,
+  getCurrentUser,
+  type AuthUser,
+  type SignupData,
+  type LoginData,
+} from "../services/authService";
+
+interface AuthContextType {
+  user: AuthUser | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  loading: boolean;
+  signup: (data: SignupData) => Promise<void>;
+  login: (data: LoginData) => Promise<void>;
   logout: () => void;
-  updateUser: (user: User) => void;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    token: null,
-    isAuthenticated: false,
-  });
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+const syncUserStorage = (user: AuthUser) => {
+  localStorage.setItem("careerverse-user", JSON.stringify(user));
+
+  if (user.name) {
+    localStorage.setItem("careerverse-name", user.name);
+  }
+
+  if (user.email) {
+    localStorage.setItem("careerverse-email", user.email);
+  }
+};
+
+export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(
+    localStorage.getItem("careerverse-token")
+  );
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('career_token');
-    const userStr = localStorage.getItem('career_user');
-    if (token && userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        setState({ user, token, isAuthenticated: true });
-      } catch {
-        localStorage.removeItem('career_token');
-        localStorage.removeItem('career_user');
+    let active = true;
+
+    const verifySession = async () => {
+      const storedToken = localStorage.getItem("careerverse-token");
+      const storedUser = localStorage.getItem("careerverse-user");
+
+      if (!storedToken || !storedUser) {
+        if (active) {
+          setUser(null);
+          setToken(null);
+          setLoading(false);
+        }
+        return;
       }
-    }
+
+      try {
+        const parsedUser = JSON.parse(storedUser) as AuthUser;
+
+        if (active) {
+          setToken(storedToken);
+          setUser(parsedUser);
+          syncUserStorage(parsedUser);
+        }
+
+        const response = await getCurrentUser();
+
+        // Refresh user details if the API returns them.
+        const currentUser =
+          response?.user ?? response?.data?.user ?? response;
+
+        if (
+          active &&
+          currentUser &&
+          typeof currentUser === "object" &&
+          (currentUser.name || currentUser.email)
+        ) {
+          const mergedUser = {
+            ...parsedUser,
+            ...currentUser,
+          } as AuthUser;
+
+          setUser(mergedUser);
+          syncUserStorage(mergedUser);
+        }
+      } catch (error) {
+        console.error("Session verification failed:", error);
+
+        if (active) {
+          localStorage.removeItem("careerverse-token");
+          localStorage.removeItem("careerverse-user");
+          localStorage.removeItem("careerverse-name");
+          localStorage.removeItem("careerverse-email");
+          setToken(null);
+          setUser(null);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    verifySession();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const users: Record<string, { user: User; password: string }> = JSON.parse(
-      localStorage.getItem('career_users') || '{}'
-    );
-    const entry = Object.values(users).find((u) => u.user.email === email);
-    if (!entry) throw new Error('No account found with this email.');
-    if (entry.password !== btoa(password)) throw new Error('Incorrect password.');
+  const signup = async (data: SignupData) => {
+    const response = await signupUser(data);
 
-    const token = `mock_jwt_${entry.user.id}_${Date.now()}`;
-    localStorage.setItem('career_token', token);
-    localStorage.setItem('career_user', JSON.stringify(entry.user));
-    setState({ user: entry.user, token, isAuthenticated: true });
+    localStorage.setItem("careerverse-token", response.token);
+    syncUserStorage(response.user);
+
+    setToken(response.token);
+    setUser(response.user);
   };
 
-  const signup = async (name: string, email: string, password: string) => {
-    const users: Record<string, { user: User; password: string }> = JSON.parse(
-      localStorage.getItem('career_users') || '{}'
-    );
-    const exists = Object.values(users).some((u) => u.user.email === email);
-    if (exists) throw new Error('An account with this email already exists.');
+  const login = async (data: LoginData) => {
+    const response = await loginUser(data);
 
-    const user: User = {
-      id: `user_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-      email,
-      name,
-      createdAt: new Date().toISOString(),
-    };
-    users[user.id] = { user, password: btoa(password) };
-    localStorage.setItem('career_users', JSON.stringify(users));
+    localStorage.setItem("careerverse-token", response.token);
+    syncUserStorage(response.user);
 
-    const token = `mock_jwt_${user.id}_${Date.now()}`;
-    localStorage.setItem('career_token', token);
-    localStorage.setItem('career_user', JSON.stringify(user));
-    setState({ user, token, isAuthenticated: true });
+    setToken(response.token);
+    setUser(response.user);
   };
 
   const logout = () => {
-    localStorage.removeItem('career_token');
-    localStorage.removeItem('career_user');
-    setState({ user: null, token: null, isAuthenticated: false });
-  };
+    localStorage.removeItem("careerverse-token");
+    localStorage.removeItem("careerverse-user");
+    localStorage.removeItem("careerverse-name");
+    localStorage.removeItem("careerverse-email");
+    localStorage.removeItem("careerverse-assessment");
 
-  const updateUser = (user: User) => {
-    localStorage.setItem('career_user', JSON.stringify(user));
-    setState((prev) => ({ ...prev, user }));
+    setToken(null);
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, signup, logout, updateUser }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        isAuthenticated: Boolean(token && user),
+        loading,
+        signup,
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
-}
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error("useAuth must be used inside AuthProvider");
+  }
+
+  return context;
+};

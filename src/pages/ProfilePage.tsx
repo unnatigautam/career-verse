@@ -1,296 +1,463 @@
-import { useState, useEffect, type FormEvent, type KeyboardEvent } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { getProfile, saveProfile, getProfileCompletion } from '../services/profileService';
-import type { Profile } from '../types';
 
-const YEAR_OPTIONS = ['1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year', 'Postgraduate Year 1', 'Postgraduate Year 2', 'PhD Student'];
-const AREA_OPTIONS = ['Web Development', 'Mobile Development', 'Machine Learning / AI', 'Data Science', 'Cloud Computing', 'Cybersecurity', 'DevOps / SRE', 'Blockchain / Web3', 'Product Management', 'UX / UI Design', 'Embedded Systems', 'Game Development', 'Computer Vision', 'NLP / Conversational AI', 'Fintech'];
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  ArrowLeft,
+  User,
+  Mail,
+  GraduationCap,
+  Briefcase,
+  Target,
+  Save,
+  CheckCircle2,
+  Sparkles,
+  BookOpen,
+  LoaderCircle,
+} from "lucide-react";
+import { useAuth } from "../context/AuthContext";
+import {
+  getProfile,
+  saveProfile,
+  type ProfileData,
+} from "../services/profileService";
+import { getLatestAssessment } from "../services/assessmentService";
 
-function TagInput({ label, tags, onAdd, onRemove, placeholder, disabled }: {
-  label: string;
-  tags: string[];
-  onAdd: (tag: string) => void;
-  onRemove: (tag: string) => void;
-  placeholder?: string;
-  disabled?: boolean;
-}) {
-  const [input, setInput] = useState('');
+type AssessmentAnswers = {
+  education?: string;
+  field?: string;
+  interests?: string[];
+  skills?: string[];
+  experience?: string;
+  workPreference?: string;
+  careerGoal?: string;
+};
 
-  const handleAdd = () => {
-    const val = input.trim();
-    if (val && !tags.includes(val)) {
-      onAdd(val);
-      setInput('');
-    }
+const emptyProfile: ProfileData = {
+  userId: "",
+  name: "",
+  email: "",
+  education: "",
+  field: "",
+  interests: [],
+  skills: [],
+  experience: "",
+  workPreference: "",
+  careerGoal: "",
+};
+
+const mergeProfile = (
+  profile: ProfileData | null,
+  assessment: AssessmentAnswers | null,
+  user: { name?: string; email?: string } | null
+): ProfileData => {
+  const base = profile ?? emptyProfile;
+
+  return {
+    ...emptyProfile,
+    ...base,
+    name: base.name?.trim() || user?.name || "",
+    email: base.email?.trim() || user?.email || "",
+    education: base.education || assessment?.education || "",
+    field: base.field || assessment?.field || "",
+    interests:
+      base.interests?.length > 0
+        ? base.interests
+        : assessment?.interests ?? [],
+    skills:
+      base.skills?.length > 0
+        ? base.skills
+        : assessment?.skills ?? [],
+    experience: base.experience || assessment?.experience || "",
+    workPreference:
+      base.workPreference || assessment?.workPreference || "",
+    careerGoal: base.careerGoal || assessment?.careerGoal || "",
   };
-
-  const handleKey = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      handleAdd();
-    }
-  };
-
-  return (
-    <div>
-      <label className="form-label">{label}</label>
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.625rem' }}>
-        <input
-          type="text"
-          className="input-field"
-          placeholder={placeholder || `Add ${label.toLowerCase()} and press Enter`}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKey}
-          disabled={disabled}
-          style={{ flex: 1 }}
-        />
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={disabled || !input.trim()}
-          className="btn-secondary"
-          style={{ flexShrink: 0, padding: '0.625rem 1rem' }}
-        >
-          Add
-        </button>
-      </div>
-      {tags.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
-          {tags.map((tag) => (
-            <span
-              key={tag}
-              className="tag"
-              style={{ cursor: 'pointer', userSelect: 'none' }}
-              onClick={() => !disabled && onRemove(tag)}
-              title="Click to remove"
-            >
-              {tag}
-              {!disabled && <span style={{ marginLeft: '0.375rem', opacity: 0.6, fontSize: '0.75rem' }}>✕</span>}
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MultiSelect({ label, options, selected, onChange, disabled }: {
-  label: string;
-  options: string[];
-  selected: string[];
-  onChange: (val: string[]) => void;
-  disabled?: boolean;
-}) {
-  const toggle = (opt: string) => {
-    if (disabled) return;
-    onChange(selected.includes(opt) ? selected.filter((s) => s !== opt) : [...selected, opt]);
-  };
-  return (
-    <div>
-      <label className="form-label">{label}</label>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-        {options.map((opt) => {
-          const active = selected.includes(opt);
-          return (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => toggle(opt)}
-              disabled={disabled}
-              style={{
-                background: active ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${active ? 'rgba(99,102,241,0.45)' : 'rgba(255,255,255,0.07)'}`,
-                borderRadius: 100,
-                padding: '0.375rem 0.875rem',
-                fontSize: '0.8125rem',
-                color: active ? '#818CF8' : '#64748B',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                fontFamily: "'Outfit', sans-serif",
-              }}
-            >
-              {active && <span style={{ marginRight: '0.25rem' }}>✓</span>}{opt}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+};
 
 export default function ProfilePage() {
   const { user } = useAuth();
-  const [form, setForm] = useState<Omit<Profile, 'userId' | 'updatedAt'>>({
-    name: '',
-    degree: '',
-    year: '',
-    academicBackground: '',
-    skills: [],
-    interests: [],
-    careerGoals: '',
-    preferredAreas: [],
-  });
-  const [saving, setSaving] = useState(false);
+
+  const [profile, setProfile] = useState<ProfileData>(emptyProfile);
+  const [interestsText, setInterestsText] = useState("");
+  const [skillsText, setSkillsText] = useState("");
   const [saved, setSaved] = useState(false);
-  const [completion, setCompletion] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!user) return;
-    const existing = getProfile(user.id);
-    if (existing) {
-      const { userId: _uid, updatedAt: _upd, ...rest } = existing;
-      setForm(rest);
-      setCompletion(getProfileCompletion(existing));
-    } else {
-      setForm((f) => ({ ...f, name: user.name }));
-    }
+    let active = true;
+
+    const loadProfile = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const [profileResult, assessmentResult] =
+          await Promise.allSettled([
+            getProfile(),
+            getLatestAssessment(),
+          ]);
+
+        const savedProfile =
+          profileResult.status === "fulfilled"
+            ? profileResult.value
+            : null;
+
+        const assessmentResponse =
+          assessmentResult.status === "fulfilled"
+            ? assessmentResult.value
+            : null;
+
+        const answers: AssessmentAnswers | null =
+          assessmentResponse?.assessment?.answers ??
+          assessmentResponse?.assessment ??
+          null;
+
+        const merged = mergeProfile(savedProfile, answers, user);
+
+        if (active) {
+          setProfile(merged);
+          setInterestsText((merged.interests ?? []).join(", "));
+          setSkillsText((merged.skills ?? []).join(", "));
+
+          if (profileResult.status === "rejected") {
+            console.error("Profile loading failed:", profileResult.reason);
+          }
+        }
+      } catch (err) {
+        console.error("Profile loading error:", err);
+        if (active) {
+          setError("Unable to load your profile.");
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    loadProfile();
+
+    return () => {
+      active = false;
+    };
   }, [user]);
 
-  useEffect(() => {
-    if (!user) return;
-    const mock = { ...form, userId: user.id, updatedAt: '' };
-    setCompletion(getProfileCompletion(mock));
-  }, [form, user]);
-
-  const set = <K extends keyof typeof form>(key: K, val: (typeof form)[K]) => {
-    setForm((f) => ({ ...f, [key]: val }));
+  const updateField = (
+    field: keyof ProfileData,
+    value: string | string[]
+  ) => {
+    setProfile((previous) => ({ ...previous, [field]: value }));
     setSaved(false);
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    setSaving(true);
-    await new Promise((r) => setTimeout(r, 400));
-    saveProfile({ ...form, userId: user.id, updatedAt: '' });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    try {
+      setSaving(true);
+      setError("");
+
+      const profileToSave: ProfileData = {
+        ...profile,
+        interests: interestsText
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+        skills: skillsText
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+      };
+
+      const updated = await saveProfile(profileToSave);
+
+      const normalized: ProfileData = {
+        ...emptyProfile,
+        ...profileToSave,
+        ...updated,
+        interests: updated.interests ?? profileToSave.interests,
+        skills: updated.skills ?? profileToSave.skills,
+      };
+
+      setProfile(normalized);
+      setInterestsText(normalized.interests.join(", "));
+      setSkillsText(normalized.skills.join(", "));
+
+      localStorage.setItem("careerverse-name", normalized.name);
+      localStorage.setItem("careerverse-email", normalized.email);
+
+      localStorage.setItem(
+        "careerverse-assessment",
+        JSON.stringify({
+          education: normalized.education,
+          field: normalized.field,
+          interests: normalized.interests,
+          skills: normalized.skills,
+          experience: normalized.experience,
+          workPreference: normalized.workPreference,
+          careerGoal: normalized.careerGoal,
+        })
+      );
+
+      setSaved(true);
+    } catch (err) {
+      console.error("Profile save error:", err);
+      setError("Failed to save profile. Please try again.");
+      setSaved(false);
+    } finally {
+      setSaving(false);
+    }
   };
 
+  const inputClass =
+    "w-full rounded-xl border border-white/10 bg-[#0b1020] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-violet-500/60 focus:ring-2 focus:ring-violet-500/10";
+
+  const labelClass = "mb-2 block text-sm font-medium text-slate-300";
+  const sectionClass =
+    "rounded-2xl border border-white/[0.07] bg-[#101525] p-5 sm:p-6";
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#080b14] text-slate-400">
+        <LoaderCircle className="mr-3 animate-spin" size={20} />
+        Loading your profile...
+      </div>
+    );
+  }
+
   return (
-    <div className="mesh-bg" style={{ minHeight: '100vh', padding: '2rem 1.5rem' }}>
-      <div style={{ maxWidth: 860, margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{ marginBottom: '2rem' }}>
-          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.8rem', color: '#6366F1', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 0.5rem' }}>
-            Your Profile
-          </p>
-          <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#E8EAF6', margin: '0 0 0.75rem', letterSpacing: '-0.02em' }}>
-            Build your career profile
-          </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
-                <span style={{ fontSize: '0.8125rem', color: '#475569' }}>Profile completion</span>
-                <span style={{ fontSize: '0.8125rem', color: '#818CF8', fontFamily: "'JetBrains Mono', monospace" }}>{completion}%</span>
+    <div className="min-h-screen bg-[#080b14] text-white">
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <Link
+            to="/dashboard"
+            className="mb-6 inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"
+          >
+            <ArrowLeft size={16} />
+            Back to Dashboard
+          </Link>
+
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="mb-2 flex items-center gap-2 text-sm text-violet-300">
+                <Sparkles size={15} />
+                Your CareerVerse Profile
               </div>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: `${completion}%` }} />
-              </div>
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                Profile Settings
+              </h1>
+              <p className="mt-2 text-slate-400">
+                Manage your information and career preferences.
+              </p>
+            </div>
+
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-500/20 to-blue-500/20">
+              <User size={30} className="text-violet-300" />
             </div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        {error && (
+          <div className="mb-5 rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-300">
+            {error}
+          </div>
+        )}
 
-            {/* Basic info */}
-            <div className="card">
-              <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#E8EAF6', margin: '0 0 1.5rem' }}>Basic information</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
-                <div style={{ gridColumn: 'span 2' }}>
-                  <label className="form-label">Full name</label>
-                  <input className="input-field" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Your full name" />
-                </div>
-                <div>
-                  <label className="form-label">Degree / Course</label>
-                  <input className="input-field" value={form.degree} onChange={(e) => set('degree', e.target.value)} placeholder="e.g., B.Tech Computer Science" />
-                </div>
-                <div>
-                  <label className="form-label">Current year / semester</label>
-                  <select
-                    className="input-field"
-                    value={form.year}
-                    onChange={(e) => set('year', e.target.value)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <option value="">Select year</option>
-                    {YEAR_OPTIONS.map((y) => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                </div>
-                <div style={{ gridColumn: 'span 2' }}>
-                  <label className="form-label">Academic background</label>
-                  <textarea
-                    className="input-field"
-                    value={form.academicBackground}
-                    onChange={(e) => set('academicBackground', e.target.value)}
-                    placeholder="Briefly describe your academic background, notable courses, projects, GPA, etc."
-                    rows={3}
-                    style={{ resize: 'vertical' }}
+        <form onSubmit={handleSave} className="space-y-6">
+          <section className={sectionClass}>
+            <div className="mb-6 flex items-center gap-3">
+              <div className="rounded-xl bg-violet-500/10 p-2.5">
+                <User size={20} className="text-violet-300" />
+              </div>
+              <div>
+                <h2 className="font-semibold">Personal Information</h2>
+                <p className="text-xs text-slate-500">Basic information about you</p>
+              </div>
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label className={labelClass}>Full Name</label>
+                <input
+                  value={profile.name}
+                  onChange={(e) => updateField("name", e.target.value)}
+                  placeholder="Enter your full name"
+                  className={inputClass}
+                  required
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Email Address</label>
+                <div className="relative">
+                  <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="email"
+                    value={profile.email}
+                    onChange={(e) => updateField("email", e.target.value)}
+                    placeholder="you@example.com"
+                    className={`${inputClass} pl-10`}
                   />
                 </div>
               </div>
             </div>
+          </section>
 
-            {/* Skills & Interests */}
-            <div className="card">
-              <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#E8EAF6', margin: '0 0 1.5rem' }}>Skills & interests</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <TagInput
-                  label="Technical skills"
-                  tags={form.skills}
-                  onAdd={(t) => set('skills', [...form.skills, t])}
-                  onRemove={(t) => set('skills', form.skills.filter((s) => s !== t))}
-                  placeholder="e.g., Python, React, SQL — press Enter to add"
-                />
-                <TagInput
-                  label="Personal interests"
-                  tags={form.interests}
-                  onAdd={(t) => set('interests', [...form.interests, t])}
-                  onRemove={(t) => set('interests', form.interests.filter((s) => s !== t))}
-                  placeholder="e.g., Machine Learning, Open Source, Gaming — press Enter to add"
-                />
+          <section className={sectionClass}>
+            <div className="mb-6 flex items-center gap-3">
+              <div className="rounded-xl bg-blue-500/10 p-2.5">
+                <GraduationCap size={20} className="text-blue-300" />
+              </div>
+              <div>
+                <h2 className="font-semibold">Education</h2>
+                <p className="text-xs text-slate-500">Your academic background</p>
               </div>
             </div>
 
-            {/* Goals & Areas */}
-            <div className="card">
-              <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#E8EAF6', margin: '0 0 1.5rem' }}>Goals & technology areas</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <div>
-                  <label className="form-label">Career goals</label>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label className={labelClass}>Education Level</label>
+                <select
+                  value={profile.education}
+                  onChange={(e) => updateField("education", e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Select education level</option>
+                  <option value="High School">High School</option>
+                  <option value="Undergraduate">Undergraduate</option>
+                  <option value="Graduate">Graduate</option>
+                  <option value="Postgraduate">Postgraduate</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Degree / Field</label>
+                <input
+                  value={profile.field}
+                  onChange={(e) => updateField("field", e.target.value)}
+                  placeholder="e.g. Computer Science"
+                  className={inputClass}
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className={sectionClass}>
+            <div className="mb-6 flex items-center gap-3">
+              <div className="rounded-xl bg-emerald-500/10 p-2.5">
+                <BookOpen size={20} className="text-emerald-300" />
+              </div>
+              <div>
+                <h2 className="font-semibold">Skills & Interests</h2>
+                <p className="text-xs text-slate-500">Help CareerVerse understand your strengths</p>
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <label className={labelClass}>Interests</label>
+                <textarea
+                  value={interestsText}
+                  onChange={(e) => {
+                    setInterestsText(e.target.value);
+                    setSaved(false);
+                  }}
+                  placeholder="e.g. Artificial Intelligence, Web Development, Design"
+                  rows={3}
+                  className={`${inputClass} resize-y`}
+                />
+                <p className="mt-2 text-xs text-slate-500">Separate multiple interests with commas.</p>
+              </div>
+              <div>
+                <label className={labelClass}>Skills</label>
+                <textarea
+                  value={skillsText}
+                  onChange={(e) => {
+                    setSkillsText(e.target.value);
+                    setSaved(false);
+                  }}
+                  placeholder="e.g. Python, C++, React, SQL"
+                  rows={3}
+                  className={`${inputClass} resize-y`}
+                />
+                <p className="mt-2 text-xs text-slate-500">Separate multiple skills with commas.</p>
+              </div>
+            </div>
+          </section>
+
+          <section className={sectionClass}>
+            <div className="mb-6 flex items-center gap-3">
+              <div className="rounded-xl bg-amber-500/10 p-2.5">
+                <Briefcase size={20} className="text-amber-300" />
+              </div>
+              <div>
+                <h2 className="font-semibold">Career Preferences</h2>
+                <p className="text-xs text-slate-500">Tell us what your career looks like</p>
+              </div>
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label className={labelClass}>Experience Level</label>
+                <select
+                  value={profile.experience}
+                  onChange={(e) => updateField("experience", e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Select experience</option>
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Work Preference</label>
+                <select
+                  value={profile.workPreference}
+                  onChange={(e) => updateField("workPreference", e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Select preference</option>
+                  <option value="Remote">Remote</option>
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="On-site">On-site</option>
+                  <option value="Flexible">Flexible</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass}>Career Goal</label>
+                <div className="relative">
+                  <Target size={16} className="absolute left-4 top-4 text-slate-500" />
                   <textarea
-                    className="input-field"
-                    value={form.careerGoals}
-                    onChange={(e) => set('careerGoals', e.target.value)}
-                    placeholder="What do you hope to achieve in your career? What kind of impact do you want to make?"
+                    value={profile.careerGoal}
+                    onChange={(e) => updateField("careerGoal", e.target.value)}
+                    placeholder="e.g. Become an AI/ML Engineer and build intelligent applications"
                     rows={3}
-                    style={{ resize: 'vertical' }}
+                    className={`${inputClass} resize-y pl-10`}
                   />
                 </div>
-                <MultiSelect
-                  label="Preferred technology / domain areas"
-                  options={AREA_OPTIONS}
-                  selected={form.preferredAreas}
-                  onChange={(val) => set('preferredAreas', val)}
-                />
               </div>
             </div>
+          </section>
 
-            {/* Submit */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'flex-end' }}>
-              {saved && (
-                <span style={{ color: '#34D399', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                  <span>✓</span> Profile saved successfully
-                </span>
+          <div className="flex flex-col gap-4 rounded-2xl border border-white/[0.07] bg-[#101525] p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 text-sm">
+              {saved ? (
+                <>
+                  <CheckCircle2 size={18} className="text-emerald-400" />
+                  <span className="text-emerald-300">Profile saved successfully in MongoDB!</span>
+                </>
+              ) : (
+                <span className="text-slate-500">Changes will be saved to your account.</span>
               )}
-              <button type="submit" className="btn-primary" disabled={saving} style={{ padding: '0.75rem 2rem' }}>
-                {saving ? 'Saving...' : 'Save profile →'}
-              </button>
             </div>
-
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving ? <LoaderCircle size={16} className="animate-spin" /> : <Save size={16} />}
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
           </div>
         </form>
       </div>

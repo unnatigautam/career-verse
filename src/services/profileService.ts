@@ -1,35 +1,47 @@
-import type { Profile } from '../types';
 
-const KEY = 'career_profiles';
+import api from "./api";
 
-function getAll(): Record<string, Profile> {
-  return JSON.parse(localStorage.getItem(KEY) || '{}');
+export interface ProfileData {
+  userId: string;
+  name: string;
+  email: string;
+  education: string;
+  field: string;
+  interests: string[];
+  skills: string[];
+  experience: string;
+  workPreference: string;
+  careerGoal: string;
+  updatedAt?: string;
 }
 
-export function getProfile(userId: string): Profile | null {
-  return getAll()[userId] || null;
-}
+export const getProfile = async (): Promise<ProfileData | null> => {
+  const response = await api.get("/profile");
+  return response.data.profile ?? null;
+};
 
-export function saveProfile(profile: Profile): Profile {
-  const all = getAll();
-  const updated = { ...profile, updatedAt: new Date().toISOString() };
-  all[profile.userId] = updated;
-  localStorage.setItem(KEY, JSON.stringify(all));
-  return updated;
-}
+export const saveProfile = async (
+  profile: ProfileData
+): Promise<ProfileData> => {
+  const response = await api.put("/profile", profile);
+  return response.data.profile;
+};
 
-export function getProfileCompletion(profile: Profile | null): number {
+export function getProfileCompletion(profile: ProfileData | null): number {
   if (!profile) return 0;
+
   const fields = [
     profile.name,
-    profile.degree,
-    profile.year,
-    profile.academicBackground,
+    profile.education,
+    profile.field,
     profile.skills.length > 0,
     profile.interests.length > 0,
-    profile.careerGoals,
-    profile.preferredAreas.length > 0,
+    profile.careerGoal,
+    profile.workPreference,
+    profile.experience,
   ];
-  const filled = fields.filter(Boolean).length;
-  return Math.round((filled / fields.length) * 100);
+
+  return Math.round(
+    (fields.filter(Boolean).length / fields.length) * 100
+  );
 }

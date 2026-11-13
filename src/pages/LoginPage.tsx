@@ -1,156 +1,156 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import LoadingSpinner from '../components/LoadingSpinner';
 
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Sparkles,
+} from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
-  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { login } = useAuth();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
-
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!email || !password) { setError('Please fill in all fields.'); return; }
+    setError("");
     setLoading(true);
-    setError('');
+
     try {
-      await login(email, password);
-      navigate('/dashboard');
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+      await login({ email, password });
+      navigate("/dashboard");
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message ||
+          "Login failed. Please check your credentials."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div
-      className="mesh-bg"
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '2rem',
-      }}
-    >
-      <div style={{ width: '100%', maxWidth: 420 }}>
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-          <Link to="/" style={{ textDecoration: 'none', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '0.875rem' }}>
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 14,
-                background: 'linear-gradient(135deg, #6366F1, #22D3EE)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 22,
-                color: 'white',
-                boxShadow: '0 8px 24px rgba(99,102,241,0.35)',
-              }}
-            >
-              ✦
-            </div>
-            <span style={{ fontWeight: 800, fontSize: '1.375rem', color: '#E8EAF6', letterSpacing: '-0.02em' }}>
-              CareerAI
-            </span>
-          </Link>
-          <p style={{ color: '#475569', fontSize: '0.9375rem', marginTop: '0.5rem' }}>
-            Sign in to continue exploring personalized career paths.
-          </p>
-        </div>
+    <div className="min-h-screen bg-[#080b14] text-white flex items-center justify-center px-4 py-10">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-violet-600/10 blur-[120px] rounded-full" />
+        <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-blue-600/10 blur-[120px] rounded-full" />
+      </div>
 
-        <div className="card" style={{ borderRadius: 20, padding: '2rem' }}>
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {error && (
-              <div
-                style={{
-                  background: 'rgba(239,68,68,0.1)',
-                  border: '1px solid rgba(239,68,68,0.2)',
-                  borderRadius: 10,
-                  padding: '0.75rem 1rem',
-                  color: '#F87171',
-                  fontSize: '0.875rem',
-                }}
-              >
-                {error}
-              </div>
-            )}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative w-full max-w-md"
+      >
+        <Link
+          to="/"
+          className="flex items-center justify-center gap-2 mb-8"
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center">
+            <Sparkles size={22} />
+          </div>
+          <span className="text-2xl font-bold">
+            Career<span className="text-violet-400">Verse</span>
+          </span>
+        </Link>
 
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl p-8 shadow-2xl">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
+            <p className="text-slate-400">
+              Sign in to continue your career journey
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="form-label">Email address</label>
-              <input
-                type="email"
-                className="input-field"
-                placeholder="Enter your email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-                autoComplete="email"
-              />
-            </div>
-
-            <div>
-              <label className="form-label">Password</label>
-              <div style={{ position: 'relative' }}>
+              <label className="block text-sm text-slate-300 mb-2">
+                Email address
+              </label>
+              <div className="relative">
+                <Mail
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                />
                 <input
-                  type={showPassword ? 'text' : 'password'}
-                  className="input-field"
-                  placeholder="Your password"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  className="w-full rounded-xl border border-white/10 bg-[#0b1020] pl-11 pr-4 py-3 outline-none focus:border-violet-500 transition"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm text-slate-300 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <Lock
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"
+                />
+                <input
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  autoComplete="current-password"
-                  style={{ paddingRight: '3rem' }}
+                  placeholder="Enter your password"
+                  required
+                  className="w-full rounded-xl border border-white/10 bg-[#0b1020] pl-11 pr-12 py-3 outline-none focus:border-violet-500 transition"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  style={{
-                    position: 'absolute',
-                    right: '0.875rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: '#475569',
-                    cursor: 'pointer',
-                    fontSize: '0.8125rem',
-                    fontFamily: "'Outfit', sans-serif",
-                    padding: 0,
-                  }}
-                  tabIndex={-1}
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
                 >
-                  {showPassword ? 'Hide' : 'Show'}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
 
-            <button type="submit" className="btn-primary" disabled={loading} style={{ width: '100%', justifyContent: 'center', padding: '0.75rem' }}>
-              {loading ? <LoadingSpinner size={18} /> : 'Sign In →'}
+            {error && (
+              <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 py-3 font-semibold hover:opacity-90 transition disabled:opacity-50"
+            >
+              {loading ? "Signing in..." : "Sign in"}
+              {!loading && <ArrowRight size={18} />}
             </button>
           </form>
 
-          <div className="divider" />
-
-          <p style={{ textAlign: 'center', color: '#475569', fontSize: '0.9rem', margin: 0 }}>
-            Don't have an account?{' '}
-            <Link to="/signup" style={{ color: '#818CF8', fontWeight: 600, textDecoration: 'none' }}>
-              Create one →
+          <p className="text-center text-sm text-slate-400 mt-6">
+            Don't have an account?{" "}
+            <Link
+              to="/signup"
+              className="text-violet-400 hover:text-violet-300 font-medium"
+            >
+              Create account
             </Link>
           </p>
         </div>
-      </div>
+
+        <p className="text-center text-xs text-slate-500 mt-6">
+          Your personalized career journey starts here.
+        </p>
+      </motion.div>
     </div>
   );
 }
