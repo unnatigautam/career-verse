@@ -1,6 +1,6 @@
-# Career AI Advisor
+# CareerVerse - Personalized Career Recommendation Platform
 
-Career AI Advisor is a profile-based career recommendation application designed to help students and early-career users explore suitable career paths based on their skills, interests, educational background, and career goals.
+CareerVerse is a profile-based career recommendation application designed to help students and early-career users explore suitable career paths based on their skills, interests, educational background, and career goals.
 
 The application provides personalized career recommendations along with relevant skills, skills to develop, and suggested next steps to help users make informed career decisions.
 
@@ -10,7 +10,7 @@ The application provides personalized career recommendations along with relevant
 
 Choosing the right career path can be challenging for students and early-career users when they are unsure how their skills, interests, educational background, and career goals align with different career opportunities.
 
-Career AI Advisor provides a structured platform to explore suitable career paths based on user profile information. It offers personalized career recommendations along with relevant skills, skills to develop, and suggested next steps.
+CareerVerse provides a structured platform to explore suitable career paths based on user profile information. It offers personalized career recommendations along with relevant skills, skills to develop, and suggested next steps.
 
 The application also allows users to explore and compare career options, helping them better understand potential career directions and plan their learning and development.
 
@@ -32,7 +32,7 @@ The application also allows users to explore and compare career options, helping
 
 ## Career Recommendation System
 
-The Career AI Advisor uses **profile-based matching** to generate personalized career recommendations.
+The CareerVerse uses **profile-based matching** to generate personalized career recommendations.
 
 Recommendations are based on factors such as:
 
@@ -75,13 +75,13 @@ Make sure the following are installed on your system:
 #### 1. Clone the repository
 
 ```bash
-git clone https://github.com/unnatigautam/career-ai-advisor.git
+git clone https://github.com/unnatigautam/career-verse.git
 ```
 
 #### 2. Navigate to the project directory
 
 ```bash
-cd career-ai-advisor
+cd career-verse
 ```
 
 #### 3. Install frontend dependencies
@@ -177,7 +177,7 @@ The application will then be available through the local development URL provide
 The project is organized into separate frontend and backend modules to keep the application maintainable and scalable.
 
 ```text
-career-ai-advisor/
+career-verse/
 │
 ├── frontend/
 │   ├── src/
@@ -197,7 +197,7 @@ career-ai-advisor/
 
 ## Project Purpose
 
-The purpose of Career AI Advisor is to provide students and early-career users with a structured and personalized approach to career exploration.
+The purpose of CareerVerse is to provide students and early-career users with a structured and personalized approach to career exploration.
 
 The project aims to connect a user's skills, interests, educational background, and career goals with relevant career paths while providing useful guidance on skills to develop and possible next steps.
 
